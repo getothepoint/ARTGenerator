@@ -11,33 +11,39 @@ from typing import Optional
 from fastapi.responses import JSONResponse
 import uuid
 
-
-
 router = APIRouter()
 
 @router.get("/")
 async def read_root():
     return {"message": "Art Generator API is running!"}
-
 @router.post("/generate-image")
 async def generate_image(prompt: str = Form(...), 
                          context_image: Optional[UploadFile] = File(None),
                          image_size: str = Query("512x512", description = "Select the image size", enum=utils.valid_sizes), 
                          model: str = Query("stable_diffusion", description= "Choose the image generation model", enum= utils.TOP_IMAGE_MODELS)):
+    print("Prompt:", prompt)
+    print("Model:", model)
+    print("Image Size:", image_size)
+    print("Context Image:", type(context_image))
     if not prompt.strip(): 
         raise HTTPException(status_code=400, detail = "Please include a description of what you would like to do" )
     base64_string: Optional[str] = None
-    if context_image and not isinstance(context_image, UploadFile):
-        raise HTTPException(status_code=400, detail="Invalid file upload. Please upload a PNG or JPEG image.")
+    #if context_image and not isinstance(context_image, UploadFile):
+        #raise HTTPException(status_code=400, detail="Invalid file upload. Please upload a PNG or JPEG image.")
     if context_image:
+       print("Image:", context_image)
        image_data = await context_image.read()
+       print(f"Image data length: {len(image_data)} bytes")
        try:
             image = Image.open(BytesIO(image_data))
             format = image.format
+            print("Image format:", format)
             base64_string = base64.b64encode(image_data).decode('utf-8')  
-            if format not in ["PNG", "JPEG"]:
+            if format.upper() not in ["PNG", "JPEG", "JPG"]:
+                print("Unsupported format detected!")
                 raise HTTPException(status_code = 400, detail= "Only PNG and JPEG files are allowed.")
-       except: 
+       except:
+            print("Error opening image:", e)
             raise HTTPException(status_code=400, detail= " This is not a valid image file")
     payload = {
                 "prompt": prompt,
