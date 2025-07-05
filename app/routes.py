@@ -21,29 +21,19 @@ async def generate_image(prompt: str = Form(...),
                          context_image: Optional[UploadFile] = File(None),
                          image_size: str = Query("512x512", description = "Select the image size", enum=utils.valid_sizes), 
                          model: str = Query("stable_diffusion", description= "Choose the image generation model", enum= utils.TOP_IMAGE_MODELS)):
-    print("Prompt:", prompt)
-    print("Model:", model)
-    print("Image Size:", image_size)
-    print("Context Image:", type(context_image))
     if not prompt.strip(): 
         raise HTTPException(status_code=400, detail = "Please include a description of what you would like to do" )
     base64_string: Optional[str] = None
-    #if context_image and not isinstance(context_image, UploadFile):
-        #raise HTTPException(status_code=400, detail="Invalid file upload. Please upload a PNG or JPEG image.")
     if context_image:
        print("Image:", context_image)
        image_data = await context_image.read()
-       print(f"Image data length: {len(image_data)} bytes")
        try:
             image = Image.open(BytesIO(image_data))
             format = image.format
-            print("Image format:", format)
             base64_string = base64.b64encode(image_data).decode('utf-8')  
             if format.upper() not in ["PNG", "JPEG", "JPG"]:
-                print("Unsupported format detected!")
                 raise HTTPException(status_code = 400, detail= "Only PNG and JPEG files are allowed.")
        except:
-            print("Error opening image:", e)
             raise HTTPException(status_code=400, detail= " This is not a valid image file")
     payload = {
                 "prompt": prompt,
@@ -85,7 +75,6 @@ async def check_generation_status(request_id: str):
     status_url = f"{config.STABLE_HORDE_STATUS_ENDPOINT}/{request_id}"
     async with httpx.AsyncClient(timeout=60.0) as client:
         response = await client.get(status_url, headers=config.HEADERS)
-    
     if response.status_code not in (200, 202):
         # Something went wrong
         return JSONResponse(
