@@ -63,20 +63,23 @@ if st.button("Generate Image"):
                 for i in range(100):
                     status_response = requests.get(f"{config.STABLE_HORDE_STATUS_ENDPOINT}/{request_id}")
                     status_data = status_response.json()
-                    if status_data.get("done", False):
+                    if status_data.get("done", False): #Come back here to fix the amount of images that get displayed to the user
                         progress_bar.progress(100)
                         st.success("Image is ready!")
-                        image_url = status_data["generations"][0]["img"]
-                        st.image(image_url, caption = "Here is your generated image!")
-                        try:
+                        for gen in status_data["generations"]:
+                            image_url = gen["img"]
+                            st.image(image_url, caption = "Here is your generated image!")
+                            try:
                               image_response = requests.get(image_url)
                               image_response.raise_for_status()
                               image_bytes = image_response.content
-                        except requests.RequestException:
-                            st.error("Failed to download the image. PLease try again later.")
-                        st.text_input("Name your file:", value = "generated_image.webp", key="filename_input")
-                        if st.session_state.get("filename_input"):
-                            st.download_button(label="Download Image", data=image_bytes, file_name=st.session_state["filename_input"], mime="image/webp")
+                            except requests.RequestException:
+                                st.error("Failed to download the image. PLease try again later.")
+                                continue
+                            filename_key= f"filename_input_{gen['id']}"
+                            filename =st.text_input("Name your file:", value = "generated_image.webp", key=filename_key)
+                            if st.session_state.get(filename_key):
+                                st.download_button(label="Download Image", data=image_bytes, file_name=st.session_state[filename_key], mime="image/webp",  key=f"download_{gen['id']}")
                         break
                     else: 
                         progress= int(status_data.get("progress", 0))
