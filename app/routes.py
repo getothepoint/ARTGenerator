@@ -45,7 +45,6 @@ async def generate_image(prompt: str = Form(...),
         "request_id": request_id
         },
         status_code=202 ) 
-print( "This is working fine!")
 async def generate_image_from_prompt(prompt: str, image_size: str = "512x512", context_image: Optional[str] = None, model: str = "stable_diffusion"):
     if model not in utils.TOP_IMAGE_MODELS:
         raise HTTPException(status_code=400, detail= "This is a model that is not support on the list. Please choose another model.")
@@ -55,7 +54,7 @@ async def submit_to_stable_horde(prompt: str, model: str, image_size: str, conte
     size_parts = image_size.split("x")
     width, height = map(int, size_parts)
     params = {"model": model,
-              "n": 1,
+              "n": 2,
               "width": width,
               "height": height}
     payload = {"prompt": prompt,
