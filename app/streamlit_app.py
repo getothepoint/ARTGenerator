@@ -38,22 +38,40 @@ def send_generation_request(api_url, data, files=None):
         st.error("Could not connect to the server. Please check your internet connection.")
         return None
     
-def display_generated_images(request_id: str, status_data: dict):
-    image_urls = []
-    if not status_data.get("generations") or len(status_data["generations"]) == 0:
+def display_images_with_download(status_data: dict):
+    if not status_data.get("generations"):
         st.error("No images were generated. Please try again or adjust your prompt.")
-        return []
-    for gen in status_data["generations"]:
-        try: 
+        return
+
+    for idx, gen in enumerate(status_data["generations"]):
+        try:
             image_url = gen.get("img")
             if not image_url:
                 st.warning("One of the generated images is missing a URL.")
                 continue
-            image_urls.append(image_url)
-            st.image(image_url, caption = "Here is your generated image!")
-        except Exception as e: 
-            st.error(f"An error occured while displaying an image {e}")
-    return image_urls
+            # Display the image
+            st.image(image_url, caption="Here is your generated image!")
+            # Fetch image bytes for download
+            image_response = requests.get(image_url)
+            image_response.raise_for_status()
+            image_bytes = image_response.content
+
+            # Input for filename
+            default_name = f"generated_image_{idx + 1}.webp"
+            filename_key = f"filename_input_{idx}"
+            filename = st.text_input("Name your file:", value=default_name, key=filename_key)
+
+            # Download button
+            if st.session_state.get(filename_key):
+                st.download_button(
+                    label="Download Image",
+                    data=image_bytes,
+                    file_name=st.session_state[filename_key],
+                    mime="image/webp",
+                    key=f"download_button_{idx}"
+                )
+        except Exception as e:
+            st.error(f"Error with image {idx+1}: {e}")
 
 # Submit button
 if st.button("Generate Image"):
@@ -93,23 +111,7 @@ if st.button("Generate Image"):
                         if status_data.get("done", False): 
                             progress_bar.progress(100)
                             st.success("Image is ready!")
-                            image_urls = display_generated_images(request_id, status_data)
-                            for idx, image_url in enumerate(image_urls):
-                                try:
-                                    image_response = requests.get(image_url)
-                                    image_response.raise_for_status()
-                                    image_bytes = image_response.content
-                                except requests.RequestException:
-                                    st.error("Failed to download the image. PLease try again later.")
-                                    continue
-                                filename_key= f"filename_input_{idx}"
-                                filename =st.text_input("Name your file:", value = "generated_image.webp", key=filename_key)
-                                if st.session_state.get(filename_key):
-                                    st.download_button(label="Download Image",
-                                               data=image_bytes,
-                                               file_name=st.session_state[filename_key],
-                                               mime="image/webp", 
-                                               key=f"download_{idx}")
+                            display_images_with_download(status_data)
                             break
                         else: 
                             progress= int(response_data.get("progress", 0))
