@@ -54,7 +54,7 @@ async def submit_to_stable_horde(prompt: str, model: str, image_size: str, conte
     size_parts = image_size.split("x")
     width, height = map(int, size_parts)
     params = {"model": model,
-              "n": 2,
+              "n": 10,
               "width": width,
               "height": height}
     payload = {"prompt": prompt,
