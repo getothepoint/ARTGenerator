@@ -3,7 +3,7 @@ from PIL import Image
 from io import BytesIO
 import base64
 import requests
-from app import config
+from app import config 
 import json
 import httpx
 from app import utils
@@ -19,6 +19,7 @@ async def read_root():
 @router.post("/generate-image")
 async def generate_image(prompt: str = Form(...), 
                          context_image: Optional[UploadFile] = File(None),
+                         steps: int = 40,
                          image_size: str = Query("512x512", description = "Select the image size", enum=utils.valid_sizes), 
                          model: str = Query("stable_diffusion", description= "Choose the image generation model", enum= utils.TOP_IMAGE_MODELS)):
     if not prompt.strip(): 
@@ -38,7 +39,7 @@ async def generate_image(prompt: str = Form(...),
     payload = {
                 "prompt": prompt,
                 "context_image": base64_string}
-    request_id = await submit_to_stable_horde(prompt, model, image_size)  # Just an example to uniquely identify the request
+    request_id = await submit_to_stable_horde(prompt, model, image_size, steps)  # Just an example to uniquely identify the request
     return JSONResponse(
         content={
         "message": "Your image is being processed. Check back soon.",
@@ -50,13 +51,14 @@ async def generate_image_from_prompt(prompt: str, image_size: str = "512x512", c
         raise HTTPException(status_code=400, detail= "This is a model that is not support on the list. Please choose another model.")
     if image_size not in utils.valid_sizes:
         raise HTTPException(status_code=400, detail = "Invalid image size. Choose from 256x256, 512x512, or 1024x1024.") 
-async def submit_to_stable_horde(prompt: str, model: str, image_size: str, context_image: Optional[str] = None):
+async def submit_to_stable_horde(prompt: str, model: str, image_size: str, steps:int, context_image: Optional[str] = None):
     size_parts = image_size.split("x")
     width, height = map(int, size_parts)
     params = {"model": model,
               "n": 10,
               "width": width,
-              "height": height}
+              "height": height,
+              "steps": steps}
     payload = {"prompt": prompt,
                "params": params
                }
