@@ -22,13 +22,23 @@ model = st.selectbox("Choose a model", [
 ], index=0)
 image_size = st.selectbox("Select image size", ["256x256", "512x512", "1024x1024"], index=1)
 context_image = st.file_uploader("Upload a room image (PNG or JPEG)", type=["png", "jpg", "jpeg"])
+if context_image:
+    st.image(context_image) 
+    denoising_strength = st.session_state["denoising_strength"] = st.slider(
+        "Denoising Strength (for img2img)",
+        min_value=0.1,
+        max_value=1.0,
+        value=0.5,
+        step=0.05,
+        help="Controls how much the original image is preserved.\nLower = closer to original, Higher = more change."
+    )
 if "steps" not in st.session_state:
     st.session_state["steps"] = 40
 steps = st.slider("Number of Diffusion Steps (1–40)", 
                   min_value=1,
                   max_value=40,
                   value= st.session_state["steps"],
-                  help="Higher steps = better detail, but longer time. Most models reach peak quality around 75–100 steps.")
+                  help="Higher steps = better detail, but longer time.")
 st.session_state["steps"] = steps
 def send_generation_request(api_url: str, data: dict, files:Optional[dict] = None) -> Optional[requests.Response]:
     try:
@@ -84,7 +94,8 @@ if st.button("Generate Image"):
         data = {'prompt': prompt,
                 "model": model,
                 "image_size": image_size,
-                "steps": steps
+                "steps": steps,
+                "denoising_strength": denoising_strength
         }
         ROUTE_URL = config.GENERATE_IMAGE_URL
         files = None
