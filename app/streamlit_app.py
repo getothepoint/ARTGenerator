@@ -3,11 +3,11 @@ import requests
 import time
 import config
 import routes
+from typing import Optional
+
 
 st.title("AI Room Staging App")
 prompt = st.text_input("Describe how you'd like your space to look:")
-
-# Model selection
 model = st.selectbox("Choose a model", [
     "stable_diffusion",
     "deliberate_v2",
@@ -20,14 +20,17 @@ model = st.selectbox("Choose a model", [
     "easynegative",
     "anythingv3"
 ], index=0)
-
-# Image size selection
 image_size = st.selectbox("Select image size", ["256x256", "512x512", "1024x1024"], index=1)
-
-# Optional image upload
 context_image = st.file_uploader("Upload a room image (PNG or JPEG)", type=["png", "jpg", "jpeg"])
-
-def send_generation_request(api_url, data, files=None):
+if "steps" not in st.session_state:
+    st.session_state["steps"] = 40
+steps = st.slider("Number of Diffusion Steps (1–40)", 
+                  min_value=1,
+                  max_value=40,
+                  value= st.session_state["steps"],
+                  help="Higher steps = better detail, but longer time. Most models reach peak quality around 75–100 steps.")
+st.session_state["steps"] = steps
+def send_generation_request(api_url: str, data: dict, files:Optional[dict] = None) -> Optional[requests.Response]:
     try:
         if files:
             response = requests.post(api_url, data=data, files=files, timeout=10)
@@ -37,12 +40,10 @@ def send_generation_request(api_url, data, files=None):
     except requests.exceptions.RequestException:
         st.error("Could not connect to the server. Please check your internet connection.")
         return None
-    
 def display_images_with_download(status_data: dict):
     if not status_data.get("generations"):
         st.error("No images were generated. Please try again or adjust your prompt.")
         return
-
     for idx, gen in enumerate(status_data["generations"]):
         try:
             image_url = gen.get("img")
@@ -83,6 +84,7 @@ if st.button("Generate Image"):
         data = {'prompt': prompt,
                 "model": model,
                 "image_size": image_size,
+                "steps": steps
         }
         ROUTE_URL = config.GENERATE_IMAGE_URL
         files = None
